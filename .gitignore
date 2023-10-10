@@ -1,0 +1,6 @@
+*.csv
+db.sqlite3
+.env
+venv
+.vscode
+saved_model
