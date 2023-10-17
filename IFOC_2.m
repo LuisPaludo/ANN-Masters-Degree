@@ -9,8 +9,8 @@ f = 10000;                                     % Frequencia de amostragem do sin
 Tsc = 1/f;                                     % Periodo de amostragem do sinal
 p = 10;                                        % Numero de partes que o intervalo discreto e dividido
 h = Tsc/p;                                     % Passo de amostragem continuo
-Tsimu = 6;                                    % Tempo de Simulação
-Np = Tsimu/Tsc;                                % Número de Pontos (vetores)
+Tsimu = 60;                                    % Tempo de Simulação
+Np = round(Tsimu/Tsc);                                % Número de Pontos (vetores)
 
 %% Parâmetros do Motor
 
@@ -70,7 +70,6 @@ theta = 0;
 UI_w = 0;
 UI_id = 0;
 UI_iq = 0;
-Te = 0;
 ialpha_vetor = zeros(1,Np);
 ibeta_vetor = zeros(1,Np);
 iqs_vetor = zeros(1,Np);
@@ -84,13 +83,10 @@ t = 0:Tsc:Np*Tsc-Tsc;
 Va_vetor = zeros(1,Np);
 Vb_vetor = zeros(1,Np);
 Vc_vetor = zeros(1,Np);
-Va_prediction_vetor = zeros(1,Np);
-Vb_prediction_vetor = zeros(1,Np);
-Vc_prediction_vetor = zeros(1,Np);
 Vd_vetor = zeros(1,Np);
-Vd_prediction_vetor = zeros(1,Np);
+Vd_est_vetor = zeros(1,Np);
 Vq_vetor = zeros(1,Np);
-Vq_prediction_vetor = zeros(1,Np);
+Vq_est_vetor = zeros(1,Np);
 lambda_qr_vetor = zeros(1,Np);
 lambda_dr_vetor = zeros(1,Np);
 lambda_dr_est_vetor = zeros(1,Np);
@@ -108,62 +104,31 @@ e_id_vetor = zeros(1,Np);
 
 Tn = P*Polos/(2*weles);
 
-% Tl = Tn*((t-30).*heaviside(t-30)-(t-31).*heaviside(t-31)) - 0.5*Tn*((t-32).*heaviside(t-32)-(t-33).*heaviside(t-33)) ...
-%     - Tn*((t-34).*heaviside(t-34)-(t-35).*heaviside(t-35)) + Tn/15*((t-35).*heaviside(t-35)-(t-50).*heaviside(t-50));
-
-Tl = 2*Tn*((t-4).*heaviside(t-4)-(t-4.5).*heaviside(t-4.5));
+Tl = Tn*((t-30).*heaviside(t-30)-(t-31).*heaviside(t-31)) - 0.5*Tn*((t-32).*heaviside(t-32)-(t-33).*heaviside(t-33)) ...
+    - Tn*((t-34).*heaviside(t-34)-(t-35).*heaviside(t-35)) + Tn/15*((t-35).*heaviside(t-35)-(t-50).*heaviside(t-50));
 
 %% Corrente Id de referência
 
 lambda_nonminal = 127/(2*pi*frequencia)/(Lm);
 
-Ids_ref = lambda_nonminal*((t-0).*heaviside(t-0)-(t-1).*heaviside(t-1));
-
-% Ids_ref = 5*((t-0).*heaviside(t-0)-(t-1).*heaviside(t-1)) + 2*10*((t-2).*heaviside(t-2)-(t-2.1).*heaviside(t-2.1))  ...
-%     + 10/2*((t-3).*heaviside(t-3)-(t-5).*heaviside(t-5)) - 15/2*((t-5).*heaviside(t-5)-(t-7).*heaviside(t-7)) ...
-%     - 10/2*((t-7).*heaviside(t-7)-(t-9).*heaviside(t-9)) + 8*((t-9).*heaviside(t-9)-(t-10).*heaviside(t-10)) ...
-%     + lambda_nonminal*((t-10).*heaviside(t-10)-(t-11).*heaviside(t-11)) - lambda_nonminal/10*((t-17).*heaviside(t-17)-(t-27).*heaviside(t-27)) ...
-%     + lambda_nonminal*((t-27).*heaviside(t-27)-(t-28).*heaviside(t-28)) - lambda_nonminal/5*((t-35).*heaviside(t-35)-(t-40).*heaviside(t-40)) ...
-%     + lambda_nonminal/5*((t-40).*heaviside(t-40)-(t-45).*heaviside(t-45));
+Ids_ref = 5*((t-1).*heaviside(t-1)-(t-2).*heaviside(t-2)) + 2*10*((t-2.5).*heaviside(t-2.5)-(t-2.6).*heaviside(t-2.6))  ...
+    + 10/2*((t-3).*heaviside(t-3)-(t-5).*heaviside(t-5)) - 15/2*((t-5).*heaviside(t-5)-(t-7).*heaviside(t-7)) ...
+    - 10/2*((t-7).*heaviside(t-7)-(t-9).*heaviside(t-9)) + 8*((t-9).*heaviside(t-9)-(t-10).*heaviside(t-10)) ...
+    + lambda_nonminal*((t-10).*heaviside(t-10)-(t-11).*heaviside(t-11)) - lambda_nonminal/10*((t-17).*heaviside(t-17)-(t-27).*heaviside(t-27)) ...
+    + lambda_nonminal*((t-27).*heaviside(t-27)-(t-28).*heaviside(t-28)) - lambda_nonminal/5*((t-35).*heaviside(t-35)-(t-40).*heaviside(t-40)) ...
+    + lambda_nonminal/5*((t-40).*heaviside(t-40)-(t-45).*heaviside(t-45));
 
 %% Velocidade de Referência
 
 w_nom_ref = 2*pi*60;
 
-w_ref = w_nom_ref*10*((t-3).*heaviside(t-3)-(t-3.1).*heaviside(t-3.1));
-
-% w_ref = w_nom_ref*((t-12).*heaviside(t-12)-(t-13).*heaviside(t-13)) - 0.9*w_nom_ref*((t-13).*heaviside(t-13)-(t-14).*heaviside(t-14)) ...
-%     - 0.1*w_nom_ref*((t-14).*heaviside(t-14)-(t-15).*heaviside(t-15)) + w_nom_ref*10*((t-15).*heaviside(t-15)-(t-15.1).*heaviside(t-15.1)) ...
-%     - 2*w_nom_ref*10*((t-15.3).*heaviside(t-15.3)-(t-15.4).*heaviside(t-15.4)) + w_nom_ref*10*((t-16).*heaviside(t-16)-(t-16.2).*heaviside(t-16.2)) ...
-%     - 2*w_nom_ref/5*((t-35).*heaviside(t-35)-(t-40).*heaviside(t-40)) + 2*w_nom_ref/5*((t-40).*heaviside(t-40)-(t-45).*heaviside(t-45));
-
-%% Importar Modelo ONNX
-
-modelFolder = './saved_model/my_model_6';
-
-scalerData = load('./saved_model/data/my_model_6/scaler_values.mat');
-
-net = importNetworkFromTensorFlow(modelFolder);
+w_ref = w_nom_ref*((t-12).*heaviside(t-12)-(t-13).*heaviside(t-13)) - 0.9*w_nom_ref*((t-13).*heaviside(t-13)-(t-14).*heaviside(t-14)) ...
+    - 0.1*w_nom_ref*((t-14).*heaviside(t-14)-(t-15).*heaviside(t-15)) + w_nom_ref*10*((t-15).*heaviside(t-15)-(t-15.1).*heaviside(t-15.1)) ...
+    - 2*w_nom_ref*10*((t-15.3).*heaviside(t-15.3)-(t-15.4).*heaviside(t-15.4)) + w_nom_ref*10*((t-16).*heaviside(t-16)-(t-16.2).*heaviside(t-16.2)) ...
+    - 2*w_nom_ref/5*((t-35).*heaviside(t-35)-(t-40).*heaviside(t-40)) + 2*w_nom_ref/5*((t-40).*heaviside(t-40)-(t-45).*heaviside(t-45));
 
 %% Loop Simulação Motor
 for k = 1:Np
-
-    if(k/Np == 0.25)
-        disp('25%')
-    end
-
-    if(k/Np == 0.5)
-        disp('50%')
-    end
-
-    if(k/Np == 0.75)
-        disp('75%')
-    end
-
-    if(k/Np == 1)
-        disp('100%')
-    end
-
     %% Estimador de fluxo rotórico e orientação do sist. de referência
 
     lambda_dr_est = lambda_dr_est*((2*Lr-Tsc*Rr)/(2*Lr+Tsc*Rr)) + Ids*((Lm*Rr*Tsc)/(2*Lr+Rr*Tsc)) + Ids_ant*((Lm*Rr*Tsc)/(2*Lr+Rr*Tsc));
@@ -195,7 +160,7 @@ for k = 1:Np
     U_w = KP_w*e_w + KI_w*UI_w;
     iqs_ref = U_w;
 
-    % %Servos de corrente
+    %Servos de corrente
     e_id = Ids_ref(k) - Ids;
     UI_id = UI_id + e_id*Tsc;
     U_Id = KP_id*e_id + KI_id*UI_id;
@@ -218,23 +183,9 @@ for k = 1:Np
         U_Iq = -127*sqrt(2);
     end
 
-    % Vq = U_Iq;
-    % Vd = U_Id;
-
-    % Predição
-
-    % Seus dados de entrada
-    input_data = [e_iq, e_id, Iqs, Ids]; % e outros valores de entrada
-
-    % Normalizar os dados de entrada
-    normalized_data = normalizeInput(input_data, scalerData.x_min, scalerData.x_max);
-
-    % Fazer a previsão usando a rede neural com dados normalizados
-    predictions_normalized = predict(net, normalized_data);
-
-    % Desnormalizar os dados de saída
-    Vq_prediction = denormalizeOutput(predictions_normalized(1), scalerData.y_min(1), scalerData.y_max(1));
-    Vd_prediction = denormalizeOutput(predictions_normalized(2), scalerData.y_min(2), scalerData.y_max(2));
+    %% Solucionando a EDO eletrica (euler)
+    Vq = U_Iq;
+    Vd = U_Id;
 
     %% Calculando as Tensões Va Vb e Vc
 
@@ -245,16 +196,6 @@ for k = 1:Np
     Va = Valfa;
     Vb = -0.5*Valfa - sqrt(3)/2*Vbeta;
     Vc = -0.5*Valfa + sqrt(3)/2*Vbeta;
-
-    %% Calculando as Tensões Va Vb e Vc (Predição)
-
-    Valfa_prediction = Vq_prediction*cos(theta) + Vd_prediction*sin(theta);
-    Vbeta_prediction = -Vq_prediction*sin(theta) + Vd_prediction*cos(theta);
-
-    %Transf. inversa clarke
-    Va_prediction = Valfa_prediction;
-    Vb_prediction = -0.5*Valfa_prediction - sqrt(3)/2*Vbeta_prediction;
-    Vc_prediction = -0.5*Valfa_prediction + sqrt(3)/2*Vbeta_prediction;
 
     Vmax = 127*sqrt(2);
 
@@ -274,8 +215,6 @@ for k = 1:Np
         Vc = -0.5*Valfa + sqrt(3)/2*Vbeta;
     end
 
-    Vq = Vq_prediction;
-    Vd = Vd_prediction;
 
     for ksuper=1:p
 
@@ -310,16 +249,11 @@ for k = 1:Np
     Va_vetor(k) = Va;
     Vb_vetor(k) = Vb;
     Vc_vetor(k) = Vc;
-    Va_prediction_vetor(k) = Va_prediction;
-    Vb_prediction_vetor(k) = Vb_prediction;
-    Vc_prediction_vetor(k) = Vc_prediction;
     Ia_vetor(k) = Ia;
     Ib_vetor(k) = Ib;
     Ic_vetor(k) = Ic;
     Vd_vetor(k) = Vd;
-    Vd_prediction_vetor(k) = Vd_prediction;
     Vq_vetor(k) = Vq;
-    Vq_prediction_vetor(k) = Vq_prediction;
     lambda_qr_vetor(k) = Fqr/weles;
     lambda_dr_vetor(k) = Fdr/weles;
     lambda_dr_est_vetor(k) = lambda_dr_est;
@@ -330,60 +264,53 @@ for k = 1:Np
     e_iq_vetor(k) = e_iq;
     e_id_vetor(k) = e_id;
 
-end
-% dados_treinamento = [transpose(iqs_vetor), transpose(ids_vetor), transpose(Ids_ref), transpose(Te_vetor), transpose(Tl), transpose(wr_vetor), transpose(w_ref), ...
-%     transpose(Vq_vetor), transpose(Vd_vetor), transpose(e_w_vetor), transpose(e_iq_vetor), transpose(e_id_vetor), ...
-%     transpose(U_w_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
-% 
-% % dados_treinamento = [transpose(e_iq_vetor), transpose(e_id_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
-% 
-% headers = {'iqs', 'ids', 'Ids_ref', 'Te','TL', 'wr', 'w_ref', 'Vq', 'Vd', 'e_w', 'e_iq', 'e_id', 'U_w', 'U_iq', 'U_id'};
-% 
-% % headers = {'e_iq', 'e_id', 'U_iq', 'U_id'};
-% 
-% T = array2table(dados_treinamento, 'VariableNames', headers);
-% 
-% writetable(T, 'data/dados_validacao_1.csv');
+    % Update waitbar and message
+    % waitbar(k/Np)
 
-figure
-% Plotando os dados
-plot(t,wrpm_vetor, 'LineWidth', 2, 'DisplayName', 'Estimado', 'Color', [0.3 0.3 0.3]); % tom de cinza escuro
+end
+
+dados_treinamento = [transpose(iqs_vetor), transpose(ids_vetor), transpose(Ids_ref), transpose(Te_vetor), transpose(Tl), transpose(wr_vetor), transpose(w_ref), ...
+    transpose(Vq_vetor), transpose(Vd_vetor), transpose(e_w_vetor), transpose(e_iq_vetor), transpose(e_id_vetor), ...
+    transpose(U_w_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
+
+% dados_treinamento = [transpose(e_iq_vetor), transpose(e_id_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
+
+headers = {'iqs', 'ids', 'Ids_ref', 'Te','TL', 'wr', 'w_ref', 'Vq', 'Vd', 'e_w', 'e_iq', 'e_id', 'U_w', 'U_iq', 'U_id'};
+
+% headers = {'e_iq', 'e_id', 'U_iq', 'U_id'};
+
+T = array2table(dados_treinamento, 'VariableNames', headers);
+
+writetable(T, 'data/dados_treinamento_3.csv');
+
+% figure
+% % Plotando os dados
+% plot(t,wrpm_vetor, 'LineWidth', 2, 'DisplayName', 'Estimado', 'Color', [0.3 0.3 0.3]); % tom de cinza escuro
 
 figure
 % Plotando os dados
 plot(t,wr_vetor,t,w_ref); % tom de cinza escuro
 legend('Wr','Ref')
 
-figure
-% Plotando os dados
-plot(t,Va_vetor,t,Vb_vetor,t,Vc_vetor); % tom de cinza escuro
-legend('Va','Vb','Vc')
-
-figure
-% Plotando os dados
-plot(t,Va_prediction_vetor,t,Vb_prediction_vetor,t,Vc_prediction_vetor); % tom de cinza escuro
-legend('Va_p','Vb_p','Vc_p')
-
+% figure
+% % Plotando os dados
+% plot(t,Va_vetor,t,Vb_vetor,t,Vc_vetor); % tom de cinza escuro
+% legend('Va','Vb','Vc')
+% %
+% figure
+% % Plotando os dados
+% plot(t,Vd_vetor,t,Vq_vetor); % tom de cinza escuro
+% legend('Vd','Vq')
 %
-figure
-% Plotando os dados
-plot(t,Vd_vetor,t,Vq_vetor,t,Vd_prediction_vetor,t,Vq_prediction_vetor,'LineWidth',2); % tom de cinza escuro
-legend('Vd','Vq','Vd Prediction','Vq Prediction')
-
-figure
-% Plotando os dados
-plot(t,Vd_vetor,t,Vq_vetor); % tom de cinza escuro
-legend('Vd','Vq')
+% figure
+% % Plotando os dados
+% plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
+% legend('qr','dr', 'dr - Est')
 %
-figure
-% Plotando os dados
-plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
-legend('qr','dr', 'dr - Est')
-
-figure
-% Plotando os dados
-plot(t,Ia_vetor,t,Ib_vetor,t,Ic_vetor); % tom de cinza escuro
-legend('Ia','Ib','Ic')
+% figure
+% % Plotando os dados
+% plot(t,Ia_vetor,t,Ib_vetor,t,Ic_vetor); % tom de cinza escuro
+% legend('Ia','Ib','Ic')
 %
 % figure
 % % Plotando os dados
@@ -400,50 +327,41 @@ legend('Ia','Ib','Ic')
 % plot(t,U_id_vetor); % tom de cinza escuro
 % legend('U id')
 %
-figure
-% Plotando os dados
-plot(t,ids_vetor,t,iqs_vetor); % tom de cinza escuro
-legend('Ids','Iqs')
-
+% figure
+% % Plotando os dados
+% plot(t,ids_vetor,t,iqs_vetor); % tom de cinza escuro
+% legend('Ids','Iqs')
+%
 figure
 % Plotando os dados
 plot(t,iqs_vetor,t,U_w_vetor); % tom de cinza escuro
 legend('Iqs','Iqs Ref')
-
-figure
-% Plotando os dados
-plot(t,iqs_vetor,t,Te_vetor); % tom de cinza escuro
-legend('Iqs','Te')
-
-figure
-plot(t,ids_vetor,t,Ids_ref,'LineWidth',2)
-legend('Ids','Ref');
-
-figure
-plot(t,Te_vetor,t,Tl,'LineWidth',2)
-legend('Te','Ref');
-
-
-figure
-% Plotando os dados
-plot(t,e_w_vetor); % tom de cinza escuro
-legend('e_w')
-
-figure
-% Plotando os dados
-plot(t,e_id_vetor); % tom de cinza escuro
-legend('e_d')
-
-figure
-% Plotando os dados
-plot(t,e_iq_vetor); % tom de cinza escuro
-legend('e_q')
-
-
-function normalized_data = normalizeInput(data, data_min, data_max)
-normalized_data = (data - data_min) ./ (data_max - data_min);
-end
-
-function original_data = denormalizeOutput(normalized_data, data_min, data_max)
-original_data = normalized_data .* (data_max - data_min) + data_min;
-end
+%
+% figure
+% % Plotando os dados
+% plot(t,iqs_vetor,t,Te_vetor); % tom de cinza escuro
+% legend('Iqs','Te')
+%
+% figure
+% plot(t,ids_vetor,t,Ids_ref,'LineWidth',2)
+% legend('Ids','Ref');
+% 
+% figure
+% plot(t,Te_vetor,t,Tl,'LineWidth',2)
+% legend('Te','Ref');
+% 
+% %
+% figure
+% % Plotando os dados
+% plot(t,e_w_vetor); % tom de cinza escuro
+% legend('e_w')
+%
+% figure
+% % Plotando os dados
+% plot(t,e_id_vetor); % tom de cinza escuro
+% legend('e_d')
+%
+% figure
+% % Plotando os dados
+% plot(t,e_iq_vetor); % tom de cinza escuro
+% legend('e_q')

@@ -29,8 +29,8 @@ y_val_normalized = scaler_y.transform(y_val)
 model = tf.keras.models.Sequential([
     tf.keras.layers.Input(shape=(13,)),
     tf.keras.layers.Dense(64, activation='relu'),
-    # tf.keras.layers.Dense(32, activation='relu'),
-    # tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(16, activation='relu'),
     tf.keras.layers.Dense(2)
 ])
 
@@ -44,7 +44,7 @@ model.summary()
 
 # Treinar o modelo
 history = model.fit(X_train_normalized, y_train_normalized, 
-                    epochs=1, 
+                    epochs=5, 
                     batch_size=32, 
                     validation_data=(X_val_normalized, y_val_normalized))
 

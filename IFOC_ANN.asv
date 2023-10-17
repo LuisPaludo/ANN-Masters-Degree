@@ -84,9 +84,6 @@ t = 0:Tsc:Np*Tsc-Tsc;
 Va_vetor = zeros(1,Np);
 Vb_vetor = zeros(1,Np);
 Vc_vetor = zeros(1,Np);
-Va_prediction_vetor = zeros(1,Np);
-Vb_prediction_vetor = zeros(1,Np);
-Vc_prediction_vetor = zeros(1,Np);
 Vd_vetor = zeros(1,Np);
 Vd_prediction_vetor = zeros(1,Np);
 Vq_vetor = zeros(1,Np);
@@ -130,7 +127,7 @@ Ids_ref = lambda_nonminal*((t-0).*heaviside(t-0)-(t-1).*heaviside(t-1));
 
 w_nom_ref = 2*pi*60;
 
-w_ref = w_nom_ref*10*((t-3).*heaviside(t-3)-(t-3.1).*heaviside(t-3.1));
+w_ref = w_nom_ref/2*((t-3).*heaviside(t-3)-(t-5).*heaviside(t-5));
 
 % w_ref = w_nom_ref*((t-12).*heaviside(t-12)-(t-13).*heaviside(t-13)) - 0.9*w_nom_ref*((t-13).*heaviside(t-13)-(t-14).*heaviside(t-14)) ...
 %     - 0.1*w_nom_ref*((t-14).*heaviside(t-14)-(t-15).*heaviside(t-15)) + w_nom_ref*10*((t-15).*heaviside(t-15)-(t-15.1).*heaviside(t-15.1)) ...
@@ -139,9 +136,9 @@ w_ref = w_nom_ref*10*((t-3).*heaviside(t-3)-(t-3.1).*heaviside(t-3.1));
 
 %% Importar Modelo ONNX
 
-modelFolder = './saved_model/my_model_6';
+modelFolder = './saved_model/my_model_2';
 
-scalerData = load('./saved_model/data/my_model_6/scaler_values.mat');
+scalerData = load('./saved_model/data/my_model_2/scaler_values.mat');
 
 net = importNetworkFromTensorFlow(modelFolder);
 
@@ -218,20 +215,20 @@ for k = 1:Np
         U_Iq = -127*sqrt(2);
     end
 
-    % Vq = U_Iq;
-    % Vd = U_Id;
+    Vq = U_Iq;
+    Vd = U_Id;
 
     % Predição
 
     % Seus dados de entrada
     input_data = [e_iq, e_id, Iqs, Ids]; % e outros valores de entrada
-
+    
     % Normalizar os dados de entrada
     normalized_data = normalizeInput(input_data, scalerData.x_min, scalerData.x_max);
-
+    
     % Fazer a previsão usando a rede neural com dados normalizados
     predictions_normalized = predict(net, normalized_data);
-
+    
     % Desnormalizar os dados de saída
     Vq_prediction = denormalizeOutput(predictions_normalized(1), scalerData.y_min(1), scalerData.y_max(1));
     Vd_prediction = denormalizeOutput(predictions_normalized(2), scalerData.y_min(2), scalerData.y_max(2));
@@ -256,26 +253,27 @@ for k = 1:Np
     Vb_prediction = -0.5*Valfa_prediction - sqrt(3)/2*Vbeta_prediction;
     Vc_prediction = -0.5*Valfa_prediction + sqrt(3)/2*Vbeta_prediction;
 
-    Vmax = 127*sqrt(2);
+    % Vmax = 127*sqrt(2);
 
-    if abs(Va) > Vmax || abs(Vb) > Vmax || abs(Vc) > Vmax
-        % Calcule o fator de redução baseado na maior tensão
-        scalingFactor = Vmax / max(abs([Va, Vb, Vc]));
-
-        Vd = Vd * scalingFactor;
-        Vq = Vq * scalingFactor;
-
-        % Recalcule Va, Vb e Vc com os novos Vd e Vq se desejar
-        Valfa = Vq*cos(theta) + Vd*sin(theta);
-        Vbeta = -Vq*sin(theta) + Vd*cos(theta);
-
-        Va = Valfa;
-        Vb = -0.5*Valfa - sqrt(3)/2*Vbeta;
-        Vc = -0.5*Valfa + sqrt(3)/2*Vbeta;
-    end
+    % if abs(Va) > Vmax || abs(Vb) > Vmax || abs(Vc) > Vmax
+    %     % Calcule o fator de redução baseado na maior tensão
+    %     scalingFactor = Vmax / max(abs([Va, Vb, Vc]));
+    % 
+    %     Vd = Vd * scalingFactor;
+    %     Vq = Vq * scalingFactor;
+    % 
+    %     % Recalcule Va, Vb e Vc com os novos Vd e Vq se desejar
+    %     Valfa = Vq*cos(theta) + Vd*sin(theta);
+    %     Vbeta = -Vq*sin(theta) + Vd*cos(theta);
+    % 
+    %     Va = Valfa;
+    %     Vb = -0.5*Valfa - sqrt(3)/2*Vbeta;
+    %     Vc = -0.5*Valfa + sqrt(3)/2*Vbeta;
+    % end
 
     Vq = Vq_prediction;
-    Vd = Vd_prediction;
+    Vd = U_Id;
+
 
     for ksuper=1:p
 
@@ -331,23 +329,10 @@ for k = 1:Np
     e_id_vetor(k) = e_id;
 
 end
-% dados_treinamento = [transpose(iqs_vetor), transpose(ids_vetor), transpose(Ids_ref), transpose(Te_vetor), transpose(Tl), transpose(wr_vetor), transpose(w_ref), ...
-%     transpose(Vq_vetor), transpose(Vd_vetor), transpose(e_w_vetor), transpose(e_iq_vetor), transpose(e_id_vetor), ...
-%     transpose(U_w_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
-% 
-% % dados_treinamento = [transpose(e_iq_vetor), transpose(e_id_vetor), transpose(U_iq_vetor), transpose(U_id_vetor)];
-% 
-% headers = {'iqs', 'ids', 'Ids_ref', 'Te','TL', 'wr', 'w_ref', 'Vq', 'Vd', 'e_w', 'e_iq', 'e_id', 'U_w', 'U_iq', 'U_id'};
-% 
-% % headers = {'e_iq', 'e_id', 'U_iq', 'U_id'};
-% 
-% T = array2table(dados_treinamento, 'VariableNames', headers);
-% 
-% writetable(T, 'data/dados_validacao_1.csv');
 
-figure
-% Plotando os dados
-plot(t,wrpm_vetor, 'LineWidth', 2, 'DisplayName', 'Estimado', 'Color', [0.3 0.3 0.3]); % tom de cinza escuro
+% figure
+% % Plotando os dados
+% plot(t,wrpm_vetor, 'LineWidth', 2, 'DisplayName', 'Estimado', 'Color', [0.3 0.3 0.3]); % tom de cinza escuro
 
 figure
 % Plotando os dados
@@ -375,15 +360,15 @@ figure
 plot(t,Vd_vetor,t,Vq_vetor); % tom de cinza escuro
 legend('Vd','Vq')
 %
-figure
-% Plotando os dados
-plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
-legend('qr','dr', 'dr - Est')
-
-figure
-% Plotando os dados
-plot(t,Ia_vetor,t,Ib_vetor,t,Ic_vetor); % tom de cinza escuro
-legend('Ia','Ib','Ic')
+% figure
+% % Plotando os dados
+% plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
+% legend('qr','dr', 'dr - Est')
+%
+% figure
+% % Plotando os dados
+% plot(t,Ia_vetor,t,Ib_vetor,t,Ic_vetor); % tom de cinza escuro
+% legend('Ia','Ib','Ic')
 %
 % figure
 % % Plotando os dados
@@ -400,21 +385,21 @@ legend('Ia','Ib','Ic')
 % plot(t,U_id_vetor); % tom de cinza escuro
 % legend('U id')
 %
-figure
-% Plotando os dados
-plot(t,ids_vetor,t,iqs_vetor); % tom de cinza escuro
-legend('Ids','Iqs')
-
-figure
-% Plotando os dados
-plot(t,iqs_vetor,t,U_w_vetor); % tom de cinza escuro
-legend('Iqs','Iqs Ref')
-
-figure
-% Plotando os dados
-plot(t,iqs_vetor,t,Te_vetor); % tom de cinza escuro
-legend('Iqs','Te')
-
+% figure
+% % Plotando os dados
+% plot(t,ids_vetor,t,iqs_vetor); % tom de cinza escuro
+% legend('Ids','Iqs')
+%
+% figure
+% % Plotando os dados
+% plot(t,iqs_vetor,t,U_w_vetor); % tom de cinza escuro
+% legend('Iqs','Iqs Ref')
+%
+% figure
+% % Plotando os dados
+% plot(t,iqs_vetor,t,Te_vetor); % tom de cinza escuro
+% legend('Iqs','Te')
+%
 figure
 plot(t,ids_vetor,t,Ids_ref,'LineWidth',2)
 legend('Ids','Ref');
@@ -423,27 +408,27 @@ figure
 plot(t,Te_vetor,t,Tl,'LineWidth',2)
 legend('Te','Ref');
 
-
-figure
-% Plotando os dados
-plot(t,e_w_vetor); % tom de cinza escuro
-legend('e_w')
-
-figure
-% Plotando os dados
-plot(t,e_id_vetor); % tom de cinza escuro
-legend('e_d')
-
-figure
-% Plotando os dados
-plot(t,e_iq_vetor); % tom de cinza escuro
-legend('e_q')
+%
+% figure
+% % Plotando os dados
+% plot(t,e_w_vetor); % tom de cinza escuro
+% legend('e_w')
+%
+% figure
+% % Plotando os dados
+% plot(t,e_id_vetor); % tom de cinza escuro
+% legend('e_d')
+%
+% figure
+% % Plotando os dados
+% plot(t,e_iq_vetor); % tom de cinza escuro
+% legend('e_q')
 
 
 function normalized_data = normalizeInput(data, data_min, data_max)
-normalized_data = (data - data_min) ./ (data_max - data_min);
+    normalized_data = (data - data_min) ./ (data_max - data_min);
 end
 
 function original_data = denormalizeOutput(normalized_data, data_min, data_max)
-original_data = normalized_data .* (data_max - data_min) + data_min;
+    original_data = normalized_data .* (data_max - data_min) + data_min;
 end
