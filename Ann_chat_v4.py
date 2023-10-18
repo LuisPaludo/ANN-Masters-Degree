@@ -1,6 +1,11 @@
+# Terceiro Modelo com bons resultados
+# Diminuição da complexidade da rede neural
+# Saindo de uma rede Deep para uma rede Shallow
+# Número de hidden layers reduzidos: 4 -> 2
+# Randomização dos dados de treinamento e validação
+
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import scipy.io
@@ -8,7 +13,7 @@ import joblib
 import os
 
 # Meu modelo
-versao = '6'
+versao = '7'
 
 # Verifique se o diretório existe. Se não, crie-o.
 dir_path = f'saved_model/data/my_model_{versao}/'
@@ -20,9 +25,13 @@ dir_path = f'saved_model/my_model_{versao}/'
 if not os.path.exists(dir_path):
     os.makedirs(dir_path)
 
-# Carregar o arquivo CSV
+# Carregar e randomizar o arquivo de treinamento
 dados = pd.read_csv(f'data/dados_treinamento_2.csv')
+dados = dados.sample(frac=1).reset_index(drop=True)
+
+# Carregar e randomizar o arquivo de validação
 dados_validacao = pd.read_csv('data/dados_validacao_1.csv')
+dados_validacao = dados_validacao.sample(frac=1).reset_index(drop=True)
 
 # Para o conjunto de treinamento
 features_train = dados[['e_iq', 'e_id', 'iqs', 'ids']]
@@ -66,11 +75,7 @@ joblib.dump(scaler_labels,f'saved_model/data/my_model_{versao}/scaler_labels.sav
 # Definir a arquitetura da rede neural
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu', input_shape=(4,)),
-    # tf.keras.layers.Dropout(0.5),
     tf.keras.layers.Dense(64, activation='relu'),
-    # tf.keras.layers.BatchNormalization(),
-    # tf.keras.layers.Dense(32, activation='relu'),
-    # tf.keras.layers.Dense(16, activation='relu'),
     tf.keras.layers.Dense(2)  
 ])
 

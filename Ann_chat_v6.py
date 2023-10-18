@@ -1,11 +1,8 @@
-# Segundo Modelo
-# Bons Resultados obtidos
-# Tentativa de utilizar BatchNormalization e Dropout, porém sem sucesso
-# Adicionada função de EarlyStopping e reduce_lr
-# com o intuito de diminuir o tempo de treinamento e ajustar o valor do
-# learning rate a medida que a rede é treinada
-# Adicionado dados separados para a validação, permitindo utilziar 100%
-# dos dados gerados para treinamento
+# Quinto Modelo Com bons resultados
+# Nova tentativa de redução de complexidade de rede neural
+# Reduzido o número de neurônios da rede
+# Antes: [4] -> (80,32) -> [2]
+# Agora: [4] -> (32,16) -> [2]
 
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
@@ -16,7 +13,7 @@ import joblib
 import os
 
 # Meu modelo
-versao = '5'
+versao = '9'
 
 # Verifique se o diretório existe. Se não, crie-o.
 dir_path = f'saved_model/data/my_model_{versao}/'
@@ -28,9 +25,13 @@ dir_path = f'saved_model/my_model_{versao}/'
 if not os.path.exists(dir_path):
     os.makedirs(dir_path)
 
-# Carregar o arquivo CSV
+# Carregar e randomizar o arquivo de treinamento
 dados = pd.read_csv(f'data/dados_treinamento_2.csv')
+dados = dados.sample(frac=1).reset_index(drop=True)
+
+# Carregar e randomizar o arquivo de validação
 dados_validacao = pd.read_csv('data/dados_validacao_1.csv')
+dados_validacao = dados_validacao.sample(frac=1).reset_index(drop=True)
 
 # Para o conjunto de treinamento
 features_train = dados[['e_iq', 'e_id', 'iqs', 'ids']]
@@ -73,11 +74,7 @@ joblib.dump(scaler_labels,f'saved_model/data/my_model_{versao}/scaler_labels.sav
 
 # Definir a arquitetura da rede neural
 model = tf.keras.Sequential([
-    tf.keras.layers.Dense(128, activation='relu', input_shape=(4,)),
-    # tf.keras.layers.Dropout(0.5),
-    tf.keras.layers.Dense(64, activation='relu'),
-    # tf.keras.layers.BatchNormalization(),
-    tf.keras.layers.Dense(32, activation='relu'),
+    tf.keras.layers.Dense(32, activation='relu', input_shape=(4,)),
     tf.keras.layers.Dense(16, activation='relu'),
     tf.keras.layers.Dense(2)  
 ])
@@ -135,8 +132,8 @@ labels_test_real = scaler_labels.inverse_transform(labels_validacao_scaled)
 
 # Plotar algumas previsões vs. valores reais
 plt.figure(figsize=(12, 5))
-plt.plot(labels_test_real[:500, 0], label="Real Vq", color='blue')
-plt.plot(predictions_real[:500, 0], label="Predicted Vq", color='red', linestyle='dashed')
+plt.plot(labels_test_real[:100, 0], label="Real Vq", color='blue')
+plt.plot(predictions_real[:100, 0], label="Predicted Vq", color='red', linestyle='dashed')
 plt.legend()
 plt.title("Real vs. Predicted Vq for the first 100 test samples")
 plt.show()

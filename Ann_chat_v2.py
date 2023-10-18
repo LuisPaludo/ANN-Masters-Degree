@@ -1,3 +1,5 @@
+# Primeiro Modelo com bons resultados obtidos
+
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -47,7 +49,6 @@ features_train, features_test, labels_train, labels_test = train_test_split(
 # Definir a arquitetura da rede neural
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(128, activation='relu', input_shape=(4,)),
-    #  tf.keras.layers.Dense(64, activation='relu'),
     tf.keras.layers.Dense(64, activation='relu'),
     tf.keras.layers.Dense(32, activation='relu'),
     tf.keras.layers.Dense(16, activation='relu'),
