@@ -141,11 +141,3 @@ plt.show()
 # Salvar o modelo
 model.save_weights(f'saved_model/data/my_model_{versao}/model_weights.h5')
 model.save(f'saved_model/my_model_{versao}')
-
-
-
-
-
-
-
-

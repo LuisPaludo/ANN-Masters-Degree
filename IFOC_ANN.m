@@ -9,7 +9,7 @@ f = 10000;                                     % Frequencia de amostragem do sin
 Tsc = 1/f;                                     % Periodo de amostragem do sinal
 p = 10;                                        % Numero de partes que o intervalo discreto e dividido
 h = Tsc/p;                                     % Passo de amostragem continuo
-Tsimu = 8;                                    % Tempo de Simulação
+Tsimu = 30;                                    % Tempo de Simulação
 Np = Tsimu/Tsc;                                % Número de Pontos (vetores)
 
 %% Parâmetros do Motor
@@ -18,13 +18,15 @@ Polos = 8;                                   % Numero de polos
 Vf = 127;
 frequencia = 60;                             % Frequência elétrica nominal
 Rs = 0.6759;                                 % Resistência do estator
+Rs_nom = 0.6759;
 Lls = 0.00280;                               % Indutância de dispersão dos enrolamentos do estator
 Lm = 0.0387;                                 % Indutância mútua dos enrolamentos - estator/estator - estator/rotor - rotor/rotor
 Llr = 0.00280;                               % Indutância de dispersão dos enrolamentos do rotor
 Lr = Lm + Llr;                               % Indutância dos enrolamentos do rotor
 Ls = Lm + Lls;                               % Indutância dos enrolamentos do estator
 Rr = 0.2615;                                 % Resistencia do rotor
-J =  2*0.08876;                                 % Inércia do motor
+Rr_nom = 0.2615;
+J =  2*0.08876;                              % Inércia do motor
 K = 0.12;                                    % Coeficiente de atrito do eixo do motor
 weles = 2*pi*frequencia;                     % Velocidade sincrona em radianos elétricos por segundo
 wr = 0;                                      % Velocidade inicial
@@ -103,6 +105,8 @@ U_id_vetor = zeros(1,Np);
 e_w_vetor = zeros(1,Np);
 e_iq_vetor = zeros(1,Np);
 e_id_vetor = zeros(1,Np);
+Rs_vetor = zeros(1,Np);
+Rr_vetor = zeros(1,Np);
 
 %% Torque de Carga
 
@@ -131,7 +135,7 @@ Ids_ref = lambda_nonminal*((t-0).*heaviside(t-0)-(t-1).*heaviside(t-1));
 w_nom_ref = 2*pi*60;
 
 w_ref = w_nom_ref*10*((t-3).*heaviside(t-3)-(t-3.1).*heaviside(t-3.1)) - w_nom_ref*((t-4).*heaviside(t-4)-(t-5).*heaviside(t-5)) ...
-    - w_nom_ref*((t-5.3).*heaviside(t-5.3)-(t-5.5).*heaviside(t-5.5));
+    - w_nom_ref*((t-5.3).*heaviside(t-5.3)-(t-5.5).*heaviside(t-5.5)) + w_nom_ref*((t-15).*heaviside(t-15)-(t-16.2).*heaviside(t-16.2));
 
 % w_ref = w_nom_ref*((t-12).*heaviside(t-12)-(t-13).*heaviside(t-13)) - 0.9*w_nom_ref*((t-13).*heaviside(t-13)-(t-14).*heaviside(t-14)) ...
 %     - 0.1*w_nom_ref*((t-14).*heaviside(t-14)-(t-15).*heaviside(t-15)) + w_nom_ref*10*((t-15).*heaviside(t-15)-(t-15.1).*heaviside(t-15.1)) ...
@@ -140,9 +144,9 @@ w_ref = w_nom_ref*10*((t-3).*heaviside(t-3)-(t-3.1).*heaviside(t-3.1)) - w_nom_r
 
 %% Importar Modelo ONNX
 
-modelFolder = './saved_model/my_model_11';
+modelFolder = './saved_model/my_model_7';
 
-scalerData = load('./saved_model/data/my_model_11/scaler_values.mat');
+scalerData = load('./saved_model/data/my_model_7/scaler_values.mat');
 
 net = importNetworkFromTensorFlow(modelFolder);
 
@@ -278,6 +282,9 @@ for k = 1:Np
         Vc = -0.5*Valfa + sqrt(3)/2*Vbeta;
     end
 
+    Rs = Rs + Rs_nom*0.5/Np;
+    Rr = Rr + Rr_nom*0.5/Np;
+
     for ksuper=1:p
 
         Fqm = Xml/Xls*Fqs + Xml/Xlr*Fqr;
@@ -330,6 +337,8 @@ for k = 1:Np
     e_w_vetor(k) = e_w;
     e_iq_vetor(k) = e_iq;
     e_id_vetor(k) = e_id;
+    Rs_vetor(k) = Rs;
+    Rr_vetor(k) = Rr;
 
 end
 % dados_treinamento = [transpose(iqs_vetor), transpose(ids_vetor), transpose(Ids_ref), transpose(Te_vetor), transpose(Tl), transpose(wr_vetor), transpose(w_ref), ...
@@ -361,27 +370,27 @@ fontAxis = 12;
 % legend('Wr', 'Ref');
 
 % Gráfico 2: wr_vetor e w_ref
-figure(2);
+figure;
 plot(t, wr_vetor, t, w_ref, 'LineWidth', lineWidth);
 title('Wr vs Ref', 'FontSize', fontSize);
 xlabel('Tempo (s)', 'FontSize', fontAxis);
 ylabel('Valores', 'FontSize', fontAxis);
 legend('Wr', 'Ref');
 
-% Gráfico 3: Tensões Va, Vb e Vc
-figure;
-plot(t, Va_vetor,t, Vb_vetor,t, Vc_vetor, 'LineWidth', lineWidth);
-title('Tensões Va, Vb e Vc', 'FontSize', fontSize);
-xlabel('Tempo (s)', 'FontSize', fontAxis);
-ylabel('Tensão (V)', 'FontSize', fontAxis);
-legend('Va', 'Vb', 'Vc');
+% % Gráfico 3: Tensões Va, Vb e Vc
+% figure;
+% plot(t, Va_vetor,t, Vb_vetor,t, Vc_vetor, 'LineWidth', lineWidth);
+% title('Tensões Va, Vb e Vc', 'FontSize', fontSize);
+% xlabel('Tempo (s)', 'FontSize', fontAxis);
+% ylabel('Tensão (V)', 'FontSize', fontAxis);
+% legend('Va', 'Vb', 'Vc');
 
 % figure
 % % Plotando os dados
 % plot(t,Va_prediction_vetor,t,Vb_prediction_vetor,t,Vc_prediction_vetor); % tom de cinza escuro
 % legend('Va_p','Vb_p','Vc_p')
-% 
-% %
+
+%
 % figure
 % % Plotando os dados
 % plot(t,Vd_vetor,t,Vq_vetor,t,Vd_prediction_vetor,t,Vq_prediction_vetor,'LineWidth',2); % tom de cinza escuro
@@ -391,32 +400,32 @@ legend('Va', 'Vb', 'Vc');
 % % Plotando os dados
 % plot(t,Vd_vetor,t,Vq_vetor); % tom de cinza escuro
 % legend('Vd','Vq')
-% %
-% figure
-% % Plotando os dados
-% plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
-% legend('qr','dr', 'dr - Est')
-% 
+%
+figure
+% Plotando os dados
+plot(t,lambda_qr_vetor,t,lambda_dr_vetor,t,lambda_dr_est_vetor); % tom de cinza escuro
+legend('qr','dr', 'dr - Est')
+
 % figure
 % % Plotando os dados
 % plot(t,Ia_vetor,t,Ib_vetor,t,Ic_vetor); % tom de cinza escuro
 % legend('Ia','Ib','Ic')
-% %
-% % figure
-% % % Plotando os dados
-% % plot(t,U_w_vetor); % tom de cinza escuro
-% % legend('U_w')
-% %
-% % figure
-% % % Plotando os dados
-% % plot(t,U_iq_vetor); % tom de cinza escuro
-% % legend('U iq')
-% %
-% % figure
-% % % Plotando os dados
-% % plot(t,U_id_vetor); % tom de cinza escuro
-% % legend('U id')
-% %
+%
+% figure
+% % Plotando os dados
+% plot(t,U_w_vetor); % tom de cinza escuro
+% legend('U_w')
+%
+% figure
+% % Plotando os dados
+% plot(t,U_iq_vetor); % tom de cinza escuro
+% legend('U iq')
+%
+% figure
+% % Plotando os dados
+% plot(t,U_id_vetor); % tom de cinza escuro
+% legend('U id')
+%
 % figure
 % % Plotando os dados
 % plot(t,ids_vetor,t,iqs_vetor); % tom de cinza escuro
@@ -431,16 +440,20 @@ legend('Va', 'Vb', 'Vc');
 % % Plotando os dados
 % plot(t,iqs_vetor,t,Te_vetor); % tom de cinza escuro
 % legend('Iqs','Te')
-% 
-% figure
-% plot(t,ids_vetor,t,Ids_ref,'LineWidth',2)
-% legend('Ids','Ref');
-% 
-% figure
-% plot(t,Te_vetor,t,Tl,'LineWidth',2)
-% legend('Te','Ref');
-% 
-% 
+
+figure
+plot(t,ids_vetor,t,Ids_ref,'LineWidth',2)
+legend('Ids','Ref');
+
+figure
+plot(t,Te_vetor,t,Tl,'LineWidth',2)
+legend('Te','Ref');
+
+figure
+plot(t,Rs_vetor,t,Rr_vetor,'LineWidth',2)
+legend('Rs','Rr');
+
+
 % figure
 % % Plotando os dados
 % plot(t,e_w_vetor); % tom de cinza escuro
@@ -455,6 +468,8 @@ legend('Va', 'Vb', 'Vc');
 % % Plotando os dados
 % plot(t,e_iq_vetor); % tom de cinza escuro
 % legend('e_q')
+
+save('IFOC_ANN','t','Rs_vetor','Rr_vetor','ids_vetor','Ids_ref','Te_vetor','Tl','lambda_dr_est_vetor','lambda_dr_vetor','wr_vetor','w_ref');
 
 
 function normalized_data = normalizeInput(data, data_min, data_max)
